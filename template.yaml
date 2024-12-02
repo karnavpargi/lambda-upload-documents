@@ -1,0 +1,123 @@
+AWSTemplateFormatVersion: 2010-09-09
+Transform:
+  - AWS::Serverless-2016-10-31
+Resources:
+  uploadFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: uploads.handler
+      Runtime: nodejs20.x
+      Architectures:
+        - x86_64
+      MemorySize: 128
+      Timeout: 100
+      Description: API to upload files.
+      Policies:
+        - Statement:
+            - Sid: VisualEditor0
+              Effect: Allow
+              Action:
+                - s3:PutObject
+              Resource: arn:aws:s3:::assets/*
+            - Effect: Allow
+              Action:
+                - logs:CreateLogGroup
+                - logs:CreateLogStream
+                - logs:PutLogEvents
+              Resource: "*"
+            - Sid: EventBridgeActions
+              Effect: Allow
+              Action:
+                - events:*
+                - schemas:*
+                - scheduler:*
+                - pipes:*
+              Resource: "*"
+            - Sid: IAMCreateServiceLinkedRoleForApiDestinations
+              Effect: Allow
+              Action:
+                - iam:CreateServiceLinkedRole
+              Resource: >-
+                arn:aws:iam::*:role/aws-service-role/AmazonEventBridgeApiDestinationsServiceRolePolicy
+              Condition:
+                StringEquals:
+                  iam:AWSServiceName: apidestinations.events.amazonaws.com
+            - Sid: IAMCreateServiceLinkedRoleForAmazonEventBridgeSchemas
+              Effect: Allow
+              Action:
+                - iam:CreateServiceLinkedRole
+              Resource: >-
+                arn:aws:iam::*:role/aws-service-role/schemas.amazonaws.com/AWSServiceRoleForSchemas
+              Condition:
+                StringEquals:
+                  iam:AWSServiceName: schemas.amazonaws.com
+            - Sid: SecretsManagerAccessForApiDestinations
+              Effect: Allow
+              Action:
+                - secretsmanager:CreateSecret
+                - secretsmanager:UpdateSecret
+                - secretsmanager:DeleteSecret
+                - secretsmanager:GetSecretValue
+                - secretsmanager:PutSecretValue
+              Resource: arn:aws:secretsmanager:*:*:secret:events!*
+            - Sid: IAMPassRoleForCloudWatchEvents
+              Effect: Allow
+              Action:
+                - iam:PassRole
+              Resource: arn:aws:iam::*:role/AWS_Events_Invoke_Targets
+            - Sid: IAMPassRoleAccessForScheduler
+              Effect: Allow
+              Action:
+                - iam:PassRole
+              Resource: arn:aws:iam::*:role/*
+              Condition:
+                StringEquals:
+                  iam:PassedToService: scheduler.amazonaws.com
+            - Sid: IAMPassRoleAccessForPipes
+              Effect: Allow
+              Action:
+                - iam:PassRole
+              Resource: arn:aws:iam::*:role/*
+              Condition:
+                StringEquals:
+                  iam:PassedToService: pipes.amazonaws.com
+      RecursiveLoop: Terminate
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            Path: /uploads
+            Method: PUT
+      Environment:
+        Variables:
+          ACCESS_KEY_ID: 
+          REGION: us-west-2
+          S3_BUCKET_NAME: assets
+          SECRET_ACCESS_KEY: 
+
+  ApplicationResourceGroup:
+    Type: AWS::ResourceGroups::Group
+    Properties:
+      Name:
+        Fn::Sub: ApplicationInsights-SAM-${AWS::StackName}
+      ResourceQuery:
+        Type: CLOUDFORMATION_STACK_1_0
+  ApplicationInsightsMonitoring:
+    Type: AWS::ApplicationInsights::Application
+    Properties:
+      ResourceGroupName:
+        Ref: ApplicationResourceGroup
+      AutoConfigurationEnabled: "true"
+Outputs:
+  WebEndpoint:
+    Description: Uploads API Gateway endpoint URL for Prod stage
+    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/uploads"
+Globals:
+  Function:
+    Tracing: Active
+    LoggingConfig:
+      LogFormat: JSON
+  Api:
+    BinaryMediaTypes:
+      - "multipart/form-data"
+    TracingEnabled: true

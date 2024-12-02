@@ -1,0 +1,22 @@
+{
+  "name": "uploads",
+  "version": "1.0.0",
+  "description": "Uploads Document API Example",
+  "auther": "Karnav Pargi",
+  "main": "index.js",
+  "scripts": {
+    "start": "sam build && sam local start-api",
+    "deploy": "sam build && sam deploy",
+    "validate": "sam validate"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "aws-sdk": "^2.1692.0",
+    "uuid": "^11.0.3"
+  },
+  "devDependencies": {
+    "@aws-sdk/types": "^3.696.0"
+  }
+}
